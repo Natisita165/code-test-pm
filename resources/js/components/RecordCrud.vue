@@ -10,9 +10,9 @@
 
     <b-table :items="records" :fields="fields" striped hover class="mt-3">
       <template #cell(status)="data">
-        <span :class="data.item.status ? 'text-success' : 'text-danger'">
+        <b-badge :variant="data.item.status ? 'success' : 'danger'">
           {{ data.item.status ? 'Activo' : 'Inactivo' }}
-        </span>
+        </b-badge>
       </template>
 
       <template #cell(actions)="row">
@@ -108,10 +108,15 @@ const resetForm = () => {
 }
 
 const saveRecord = () => {
-  const data = { ...form.value }
+  let data = {
+    name: form.value.name,
+    description: form.value.description,
+    code: form.value.code,
+    status: form.value.status ? 1 : 0,
+  }
 
-  if (data.uuid) {
-    axios.put(`/records/${data.uuid}`, data).then(() => {
+  if (form.value.uuid) {
+    axios.put(`/records/${form.value.uuid}`, data).then(() => {
       fetchRecords()
       modalVisible.value = false
     })
@@ -119,6 +124,8 @@ const saveRecord = () => {
     axios.post('/records', data).then(() => {
       fetchRecords()
       modalVisible.value = false
+    }).catch(error => {
+      console.error('Error al crear el registro:', error.response?.data || error)
     })
   }
 }
@@ -128,16 +135,5 @@ const deleteRecord = (uuid) => {
     axios.delete(`/records/${uuid}`).then(() => fetchRecords())
   }
 }
-onMounted(() => {
-  axios.get('/records')
-    .then(response => {
-      console.log('Registros cargados:', response.data)
-      records.value = response.data
-    })
-    .catch(error => {
-      console.error('Error cargando registros:', error.response)
-    })
-})
-
 onMounted(fetchRecords)
 </script>

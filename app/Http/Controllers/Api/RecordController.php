@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Record;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class RecordController extends Controller
 {
@@ -28,22 +29,28 @@ class RecordController extends Controller
     
 
     public function store(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'code' => 'required|string|max:100|unique:records,code',
-            'status' => 'required|boolean',
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'name' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'code' => 'required|string|max:100|unique:test,code',
+        'status' => 'required|boolean',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
-        $record = Record::create($request->all());
-
-        return response()->json($record, 201);
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 422);
     }
+
+    $record = Record::create([
+        'uuid' => (string) Str::uuid(),
+        'name' => $request->name,
+        'description' => $request->description,
+        'code' => $request->code,
+        'status' => $request->status,
+    ]);
+
+    return response()->json($record, 201);
+}
 
     public function show($uuid)
     {
@@ -52,24 +59,24 @@ class RecordController extends Controller
     }
 
     public function update(Request $request, $uuid)
-    {
-        $record = Record::findOrFail($uuid);
+{
+    $record = Record::findOrFail($uuid);
 
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'code' => 'required|string|max:100|unique:records,code,' . $record->uuid . ',uuid',
-            'status' => 'required|boolean',
-        ]);
+    $validator = Validator::make($request->all(), [
+        'name' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'code' => 'required|string|max:100|unique:test,code,' . $record->uuid . ',uuid',
+        'status' => 'required|boolean',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
-        $record->update($request->all());
-
-        return response()->json($record);
+    if ($validator->fails()) {
+        return response()->json($validator->errors(), 422);
     }
+
+    $record->update($request->only(['name', 'description', 'code', 'status']));
+
+    return response()->json($record);
+}
 
     public function destroy($uuid)
     {
