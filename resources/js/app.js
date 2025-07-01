@@ -6,9 +6,9 @@ import axios from 'axios';
 
 import RecordCrud from './components/RecordCrud.vue';
 
-axios.defaults.baseURL = 'http://localhost:8000/api';  // O la URL correcta si usas Docker o algo diferente
+axios.defaults.baseURL = 'http://localhost:8000/api';  
 
-// Hacer la solicitud
+
 axios.get('/records')
     .then(response => console.log(response.data))
     .catch(error => console.error('Error al obtener los registros:', error));

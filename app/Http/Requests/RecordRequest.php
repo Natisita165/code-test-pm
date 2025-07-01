@@ -8,12 +8,12 @@ class RecordRequest extends FormRequest
 {
     public function authorize()
     {
-        return true;  // Cambia si usas auth
+        return true;  
     }
 
     public function rules()
     {
-        $uuid = $this->route('record'); // Obtiene el UUID de la ruta para update
+        $uuid = $this->route('record'); 
 
         return [
             'name' => 'required|string|max:255',
