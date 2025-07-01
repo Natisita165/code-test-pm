@@ -3,9 +3,27 @@
     <h2>Listado de Registros</h2>
 
     <b-button variant="primary" @click="showModal()">Nuevo</b-button>
+    <b-alert
+      v-if="showAlert"
+      variant="success"
+      dismissible
+      class="mt-3"
+      @dismissed="showAlert = false"
+    >
+      {{ successMessage }}
+    </b-alert>
 
+    <b-alert
+      v-if="showError"
+      variant="danger"
+      dismissible
+      class="mt-3"
+      @dismissed="showError = false"
+    >
+      {{ errorMessage }}
+    </b-alert>
     <b-form-group label="Filtrar por estado" class="mt-3">
-      <b-form-select v-model="filterStatus" :options="statusOptions" @change="fetchRecords" />
+      <b-form-select v-model="filterStatus" :options="statusOptions" />
     </b-form-group>
 
     <b-table :items="records" :fields="fields" striped hover class="mt-3">
@@ -21,7 +39,7 @@
       </template>
     </b-table>
 
-    <b-modal v-model="modalVisible" title="Registro" @hide="resetForm">
+    <b-modal v-model="modalVisible" :title="modalTitle" @hide="resetForm">
       <b-form @submit.prevent="saveRecord">
         <b-form-group label="Nombre">
           <b-form-input v-model="form.name" required />
@@ -36,12 +54,12 @@
         </b-form-group>
 
         <b-form-group label="Estado">
-          <b-form-checkbox v-model="form.status" :value="true" :unchecked-value="false">
+          <b-form-checkbox v-model="form.status" :value="1" :unchecked-value="0">
             Activo
           </b-form-checkbox>
         </b-form-group>
 
-        <b-button type="submit" variant="success">Guardar</b-button>
+        <b-button type="submit" variant="success">{{ submitLabel }}</b-button>
         <b-button variant="secondary" @click="modalVisible = false">Cancelar</b-button>
       </b-form>
     </b-modal>
@@ -51,7 +69,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
+import { watch } from 'vue'
 
+const errorMessage = ref('')
+const showError = ref(false)
+const successMessage = ref('')
+const showAlert = ref(false)
+const submitLabel = ref('Crear')
+const modalTitle = ref('Nuevo Registro')
 const records = ref([])
 const modalVisible = ref(false)
 const filterStatus = ref('')
@@ -65,8 +90,8 @@ const form = ref({
 
 const statusOptions = [
   { value: '', text: 'Todos' },
-  { value: 'active', text: 'Activos' },
-  { value: 'inactive', text: 'Inactivos' },
+  { value: '1', text: 'Activos' },
+  { value: '0', text: 'Inactivos' },
 ]
 
 const fields = [
@@ -79,7 +104,7 @@ const fields = [
 
 const fetchRecords = () => {
   let url = '/records'
-  if (filterStatus.value) {
+  if (filterStatus.value !== '') {
     url += `?status=${filterStatus.value}`
   }
 
@@ -91,11 +116,19 @@ const fetchRecords = () => {
 const showModal = (record = null) => {
   modalVisible.value = true
   if (record) {
-    form.value = { ...record }
+    modalTitle.value = 'Editar Registro'
+    submitLabel.value = 'Actualizar'
+    form.value = {
+      ...record,
+      status: Boolean(Number(record.status))
+    }
   } else {
+    modalTitle.value = 'Nuevo Registro'
+    submitLabel.value = 'Crear'
     resetForm()
   }
 }
+
 
 const resetForm = () => {
   form.value = {
@@ -108,25 +141,47 @@ const resetForm = () => {
 }
 
 const saveRecord = () => {
-  let data = {
+  const data = {
     name: form.value.name,
     description: form.value.description,
     code: form.value.code,
     status: form.value.status ? 1 : 0,
   }
 
+  const handleSuccess = (msg) => {
+    successMessage.value = msg
+    showAlert.value = false
+    showError.value = false
+    modalVisible.value = false
+    fetchRecords()
+
+    setTimeout(() => {
+    showAlert.value = false
+  }, 3000)
+  }
+
+  const handleError = (error) => {
+    showError.value = false
+
+    if (error.response?.data?.message?.includes('code') && error.response?.status === 422) {
+      errorMessage.value = 'El código ingresado ya está en uso.'
+    } else {
+      errorMessage.value = 'Ocurrió un error al guardar el registro.'
+    }
+
+    setTimeout(() => {
+    showError.value = false
+  }, 5000)
+  }
+
   if (form.value.uuid) {
-    axios.put(`/records/${form.value.uuid}`, data).then(() => {
-      fetchRecords()
-      modalVisible.value = false
-    })
+    axios.put(`/records/${form.value.uuid}`, data)
+      .then(() => handleSuccess('Registro actualizado con éxito.'))
+      .catch(handleError)
   } else {
-    axios.post('/records', data).then(() => {
-      fetchRecords()
-      modalVisible.value = false
-    }).catch(error => {
-      console.error('Error al crear el registro:', error.response?.data || error)
-    })
+    axios.post('/records', data)
+      .then(() => handleSuccess('Registro creado con éxito.'))
+      .catch(handleError)
   }
 }
 
@@ -136,4 +191,8 @@ const deleteRecord = (uuid) => {
   }
 }
 onMounted(fetchRecords)
+
+watch(filterStatus, () => {
+  fetchRecords()
+})
 </script>
